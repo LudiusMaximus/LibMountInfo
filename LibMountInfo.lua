@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibMountInfo-1.0", 2;
+local MAJOR, MINOR = "LibMountInfo-1.0", 3;
 local LibMountInfo = LibStub:NewLibrary(MAJOR, MINOR);
 
 if not LibMountInfo then
@@ -40,6 +40,7 @@ LibMountInfo.flyingMounts = LibMountInfo.flyingMounts or {}
 LibMountInfo.lastMount = LibMountInfo.lastMount or {}  -- { flying = mountID, notFlying = mountID, last = mostRecentMountID (either flying or non-flying) }
 LibMountInfo.callbacks = LibMountInfo.callbacks or {}  -- { onMountChanged = {}, onFlyingMountsUpdated = {} }
 LibMountInfo.ignoredMounts = LibMountInfo.ignoredMounts or {}  -- Set of mountIDs to ignore for "last mount" tracking
+LibMountInfo.trackingPaused = false  -- When true, last mount tracking is suspended
 
 -- Per-character persistent storage (to be set by addons that have saved variables)
 -- Expected format: savedVarTable[realmName][playerName] = mountID
@@ -141,9 +142,9 @@ function LibMountInfo:GetCurrentMount()
   if LibMountInfo.lastMount.flying then
     local _, _, _, active = C_MountJournal_GetMountInfoByID(LibMountInfo.lastMount.flying)
     if active then
-      -- Update 'last' field when using cached flying mount
+      -- Update 'last' field when using cached flying mount (unless tracking is paused or mount is ignored)
       local mountID = LibMountInfo.lastMount.flying
-      if not LibMountInfo.ignoredMounts[mountID] then
+      if not LibMountInfo.ignoredMounts[mountID] and not LibMountInfo.trackingPaused then
         LibMountInfo.lastMount.last = mountID
         if LibMountInfo.persistentStorage and LibMountInfo.currentRealm and LibMountInfo.currentPlayer then
           local storage = LibMountInfo.persistentStorage[LibMountInfo.currentRealm][LibMountInfo.currentPlayer]
@@ -160,9 +161,9 @@ function LibMountInfo:GetCurrentMount()
   if LibMountInfo.lastMount.notFlying then
     local _, _, _, active = C_MountJournal_GetMountInfoByID(LibMountInfo.lastMount.notFlying)
     if active then
-      -- Update 'last' field when using cached non-flying mount
+      -- Update 'last' field when using cached non-flying mount (unless tracking is paused or mount is ignored)
       local mountID = LibMountInfo.lastMount.notFlying
-      if not LibMountInfo.ignoredMounts[mountID] then
+      if not LibMountInfo.ignoredMounts[mountID] and not LibMountInfo.trackingPaused then
         LibMountInfo.lastMount.last = mountID
         if LibMountInfo.persistentStorage and LibMountInfo.currentRealm and LibMountInfo.currentPlayer then
           local storage = LibMountInfo.persistentStorage[LibMountInfo.currentRealm][LibMountInfo.currentPlayer]
@@ -184,7 +185,8 @@ function LibMountInfo:GetCurrentMount()
       local isFlying = LibMountInfo.flyingMounts[mountID] == true
       
       -- Check if this mount should be ignored (utility mounts like Yak, Brutosaur, etc.)
-      local shouldIgnore = LibMountInfo.ignoredMounts[mountID] == true
+      -- Also check if tracking is paused (e.g., during race starting countdown)
+      local shouldIgnore = LibMountInfo.ignoredMounts[mountID] == true or LibMountInfo.trackingPaused
       
       -- Cache the result (but don't update persistent storage if ignored)
       if isFlying then
@@ -355,6 +357,25 @@ function LibMountInfo:GetIgnoredMounts()
     table.insert(result, mountID)
   end
   return result
+end
+
+
+-- Pause last mount tracking
+-- Use this when you don't want automatic mount changes (e.g., race starting mounts) to be recorded
+function LibMountInfo:PauseTracking()
+  LibMountInfo.trackingPaused = true
+end
+
+
+-- Resume last mount tracking
+function LibMountInfo:ResumeTracking()
+  LibMountInfo.trackingPaused = false
+end
+
+
+-- Check if tracking is currently paused
+function LibMountInfo:IsTrackingPaused()
+  return LibMountInfo.trackingPaused
 end
 
 
