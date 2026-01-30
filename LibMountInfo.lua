@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibMountInfo-1.0", 3;
+local MAJOR, MINOR = "LibMountInfo-1.1", 3;
 local LibMountInfo = LibStub:NewLibrary(MAJOR, MINOR);
 
 if not LibMountInfo then
