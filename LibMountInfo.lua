@@ -140,7 +140,7 @@ function LibMountInfo:GetCurrentMount()
   end
 
   -- Don't update lastMount if player is dead
-  local playerIsDead = UnitIsDead("player")
+  local playerIsDead = UnitIsDeadOrGhost("player")
 
   -- Check last flying mount first for efficiency
   if LibMountInfo.lastMount.flying then
