@@ -32,7 +32,7 @@ local LE_MOUNT_JOURNAL_FILTER_UNUSABLE      = LE_MOUNT_JOURNAL_FILTER_UNUSABLE
 local IsMounted = IsMounted
 local GetRealmName = GetRealmName
 local UnitName = UnitName
-local UnitIsDead = UnitIsDead
+local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 local pairs = pairs
 
 
@@ -144,39 +144,49 @@ function LibMountInfo:GetCurrentMount()
 
   -- Check last flying mount first for efficiency
   if LibMountInfo.lastMount.flying then
-    local _, _, _, active = C_MountJournal_GetMountInfoByID(LibMountInfo.lastMount.flying)
-    if active then
-      -- Update 'last' field when using cached flying mount (unless tracking is paused or mount is ignored or player is dead)
-      local mountID = LibMountInfo.lastMount.flying
-      if not LibMountInfo.ignoredMounts[mountID] and not LibMountInfo.trackingPaused and not playerIsDead then
-        LibMountInfo.lastMount.last = mountID
-        if LibMountInfo.persistentStorage and LibMountInfo.currentRealm and LibMountInfo.currentPlayer then
-          local storage = LibMountInfo.persistentStorage[LibMountInfo.currentRealm][LibMountInfo.currentPlayer]
-          if type(storage) == "table" then
-            storage.last = mountID
+    if LibMountInfo.flyingMounts[LibMountInfo.lastMount.flying] ~= true then
+      -- Sanity check failed: cached "flying" mount is not actually a flying mount. Clear the bad cache entry.
+      LibMountInfo.lastMount.flying = nil
+    else
+      local _, _, _, active = C_MountJournal_GetMountInfoByID(LibMountInfo.lastMount.flying)
+      if active then
+        -- Update 'last' field when using cached flying mount (unless tracking is paused or mount is ignored or player is dead)
+        local mountID = LibMountInfo.lastMount.flying
+        if not LibMountInfo.ignoredMounts[mountID] and not LibMountInfo.trackingPaused and not playerIsDead then
+          LibMountInfo.lastMount.last = mountID
+          if LibMountInfo.persistentStorage and LibMountInfo.currentRealm and LibMountInfo.currentPlayer then
+            local storage = LibMountInfo.persistentStorage[LibMountInfo.currentRealm][LibMountInfo.currentPlayer]
+            if type(storage) == "table" then
+              storage.last = mountID
+            end
           end
         end
+        return mountID, true
       end
-      return mountID, true
     end
   end
 
   -- Check last non-flying mount
   if LibMountInfo.lastMount.notFlying then
-    local _, _, _, active = C_MountJournal_GetMountInfoByID(LibMountInfo.lastMount.notFlying)
-    if active then
-      -- Update 'last' field when using cached non-flying mount (unless tracking is paused or mount is ignored or player is dead)
-      local mountID = LibMountInfo.lastMount.notFlying
-      if not LibMountInfo.ignoredMounts[mountID] and not LibMountInfo.trackingPaused and not playerIsDead then
-        LibMountInfo.lastMount.last = mountID
-        if LibMountInfo.persistentStorage and LibMountInfo.currentRealm and LibMountInfo.currentPlayer then
-          local storage = LibMountInfo.persistentStorage[LibMountInfo.currentRealm][LibMountInfo.currentPlayer]
-          if type(storage) == "table" then
-            storage.last = mountID
+    if LibMountInfo.flyingMounts[LibMountInfo.lastMount.notFlying] == true then
+      -- Sanity check failed: cached "notFlying" mount is actually a flying mount. Clear the bad cache entry.
+      LibMountInfo.lastMount.notFlying = nil
+    else
+      local _, _, _, active = C_MountJournal_GetMountInfoByID(LibMountInfo.lastMount.notFlying)
+      if active then
+        -- Update 'last' field when using cached non-flying mount (unless tracking is paused or mount is ignored or player is dead)
+        local mountID = LibMountInfo.lastMount.notFlying
+        if not LibMountInfo.ignoredMounts[mountID] and not LibMountInfo.trackingPaused and not playerIsDead then
+          LibMountInfo.lastMount.last = mountID
+          if LibMountInfo.persistentStorage and LibMountInfo.currentRealm and LibMountInfo.currentPlayer then
+            local storage = LibMountInfo.persistentStorage[LibMountInfo.currentRealm][LibMountInfo.currentPlayer]
+            if type(storage) == "table" then
+              storage.last = mountID
+            end
           end
         end
+        return mountID, false
       end
-      return mountID, false
     end
   end
 
@@ -184,7 +194,7 @@ function LibMountInfo:GetCurrentMount()
   for _, mountID in pairs(C_MountJournal_GetMountIDs()) do
     local _, _, _, active = C_MountJournal_GetMountInfoByID(mountID)
     if active then
-    --   print("Current Mount:", mountID)
+      -- print("Current Mount:", mountID)
     
       local isFlying = LibMountInfo.flyingMounts[mountID] == true
       
@@ -265,7 +275,7 @@ function LibMountInfo:SetPersistentStorage(savedVarTable)
       if stored.flying and LibMountInfo.flyingMounts[stored.flying] then
         LibMountInfo.lastMount.flying = stored.flying
       end
-      if stored.notFlying then
+      if stored.notFlying and LibMountInfo.flyingMounts[stored.notFlying] ~= true then
         LibMountInfo.lastMount.notFlying = stored.notFlying
       end
       if stored.last then
