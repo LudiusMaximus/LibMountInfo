@@ -196,7 +196,7 @@ end
 
 ### Basic Usage with Persistent Storage
 ```lua
-local LibMountInfo = LibStub("LibMountInfo-1.0")
+local LibMountInfo = LibStub("LibMountInfo-1.1")
 
 -- Set up persistent storage on login
 local f = CreateFrame("Frame")
@@ -211,7 +211,7 @@ end)
 
 ### Race on Last Mount
 ```lua
-local LibMountInfo = LibStub("LibMountInfo-1.0")
+local LibMountInfo = LibStub("LibMountInfo-1.1")
 
 local function CheckRaceMount()
     local currentMount, isFlying = LibMountInfo:GetCurrentMount()
@@ -226,7 +226,7 @@ end
 
 ### DynamicCam Integration
 ```lua
-local LibMountInfo = LibStub("LibMountInfo-1.0")
+local LibMountInfo = LibStub("LibMountInfo-1.1")
 
 function MyAddon:CurrentMountCanFly()
     return LibMountInfo:CurrentMountCanFly()

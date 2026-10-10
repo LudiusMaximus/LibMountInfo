@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibMountInfo-1.1", 3;
+local MAJOR, MINOR = "LibMountInfo-1.1", 4;
 local LibMountInfo = LibStub:NewLibrary(MAJOR, MINOR);
 
 if not LibMountInfo then
@@ -41,13 +41,16 @@ LibMountInfo.flyingMounts = LibMountInfo.flyingMounts or {}
 LibMountInfo.lastMount = LibMountInfo.lastMount or {}  -- { flying = mountID, notFlying = mountID, last = mostRecentMountID (either flying or non-flying) }
 LibMountInfo.callbacks = LibMountInfo.callbacks or {}  -- { onMountChanged = {}, onFlyingMountsUpdated = {} }
 LibMountInfo.ignoredMounts = LibMountInfo.ignoredMounts or {}  -- Set of mountIDs to ignore for "last mount" tracking
-LibMountInfo.trackingPaused = false  -- When true, last mount tracking is suspended
+LibMountInfo.trackingPaused = LibMountInfo.trackingPaused or false  -- When true, last mount tracking is suspended
 
 -- Per-character persistent storage (to be set by addons that have saved variables)
 -- Expected format: savedVarTable[realmName][playerName] = mountID
-LibMountInfo.persistentStorage = nil
-LibMountInfo.currentRealm = nil
-LibMountInfo.currentPlayer = nil
+--
+-- LibMountInfo.persistentStorage, LibMountInfo.currentRealm and
+-- LibMountInfo.currentPlayer start out nil and are deliberately not reset here.
+-- When a newer copy of the library is loaded after an older one, LibStub hands it
+-- the same table and this file runs again. An addon loaded in between may already
+-- have called SetPersistentStorage, and resetting would throw that away.
 
 
 -- Helper function to store current mount journal filters
@@ -415,7 +418,12 @@ end
 
 
 -- Initialize the library
-local initFrame = CreateFrame("Frame")
+--
+-- One frame shared by every copy of the library, kept on the library table. When a
+-- newer copy runs this file again, a fresh frame would leave the older copy's
+-- handler running beside the new one. SetScript below replaces it instead.
+LibMountInfo.eventFrame = LibMountInfo.eventFrame or CreateFrame("Frame")
+local initFrame = LibMountInfo.eventFrame
 initFrame:RegisterEvent("PLAYER_LOGIN")
 initFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
 initFrame:RegisterEvent("NEW_MOUNT_ADDED")
