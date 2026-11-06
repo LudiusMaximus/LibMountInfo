@@ -122,11 +122,12 @@ Manually refresh the flying mount list. This is automatically called on `PLAYER_
 LibMountInfo:UpdateFlyingMounts()
 ```
 
-#### `LibMountInfo:SetPersistentStorage(savedVarTable)`
+#### `LibMountInfo:SetPersistentStorage(savedVarTable, realmKey, playerKey)`
 Connect the library to your addon's saved variables for cross-session persistence.
 
 **Parameters:**
 - `savedVarTable` (table): A saved variable with structure `[realmName][playerName] = { flying = mountID, notFlying = mountID, last = mountID }`
+- `realmKey`, `playerKey` (string, optional): The keys to store the current character under, instead of `GetRealmName()` and `UnitName("player")`. Use them where those two do not tell characters apart, for example on WoW Forever, which has no realms and where first names are not unique. The character is not reliably known before `PLAYER_LOGIN`, so only pass them from then on.
 
 The library stores your last flying mount, last non-flying mount, and most recently used mount. It will automatically migrate old format (single mountID) to the new format.
 

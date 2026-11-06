@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibMountInfo-1.1", 4;
+local MAJOR, MINOR = "LibMountInfo-1.1", 5;
 local LibMountInfo = LibStub:NewLibrary(MAJOR, MINOR);
 
 if not LibMountInfo then
@@ -46,8 +46,9 @@ LibMountInfo.trackingPaused = LibMountInfo.trackingPaused or false  -- When true
 -- Per-character persistent storage (to be set by addons that have saved variables)
 -- Expected format: savedVarTable[realmName][playerName] = mountID
 --
--- LibMountInfo.persistentStorage, LibMountInfo.currentRealm and
--- LibMountInfo.currentPlayer start out nil and are deliberately not reset here.
+-- LibMountInfo.persistentStorage, LibMountInfo.currentRealm,
+-- LibMountInfo.currentPlayer, LibMountInfo.customRealmKey and
+-- LibMountInfo.customPlayerKey start out nil and are deliberately not reset here.
 -- When a newer copy of the library is loaded after an older one, LibStub hands it
 -- the same table and this file runs again. An addon loaded in between may already
 -- have called SetPersistentStorage, and resetting would throw that away.
@@ -248,8 +249,20 @@ end
 -- Set up persistent storage for cross-session mount tracking
 -- savedVarTable: A saved variable table with structure [realmName][playerName] = { flying = mountID, notFlying = mountID, last = mostRecentMountID }
 -- The 'last' field stores whichever mount (flying or non-flying) was used most recently
-function LibMountInfo:SetPersistentStorage(savedVarTable)
+--
+-- realmKey, playerKey (optional): The keys to store the current character under,
+-- instead of GetRealmName() and UnitName("player"). For clients where those two do not
+-- tell characters apart: WoW Forever has no realms, and first names are not unique there.
+-- The character is not reliably known before PLAYER_LOGIN, so only pass them from then on.
+function LibMountInfo:SetPersistentStorage(savedVarTable, realmKey, playerKey)
   LibMountInfo.persistentStorage = savedVarTable
+
+  if realmKey and playerKey then
+    LibMountInfo.customRealmKey = realmKey
+    LibMountInfo.customPlayerKey = playerKey
+    LibMountInfo.currentRealm = realmKey
+    LibMountInfo.currentPlayer = playerKey
+  end
   
   if not LibMountInfo.currentRealm or not LibMountInfo.currentPlayer then
     return
@@ -429,8 +442,9 @@ initFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
 initFrame:RegisterEvent("NEW_MOUNT_ADDED")
 initFrame:SetScript("OnEvent", function(_, event, ...)
   if event == "PLAYER_LOGIN" then
-    LibMountInfo.currentRealm = GetRealmName()
-    LibMountInfo.currentPlayer = UnitName("player")
+    -- Keys passed to SetPersistentStorage take precedence.
+    LibMountInfo.currentRealm = LibMountInfo.customRealmKey or GetRealmName()
+    LibMountInfo.currentPlayer = LibMountInfo.customPlayerKey or UnitName("player")
     LibMountInfo:UpdateFlyingMounts()
     
     -- If persistent storage was set before login, initialize it now
