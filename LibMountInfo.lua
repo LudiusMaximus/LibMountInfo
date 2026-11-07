@@ -44,7 +44,7 @@ LibMountInfo.ignoredMounts = LibMountInfo.ignoredMounts or {}  -- Set of mountID
 LibMountInfo.trackingPaused = LibMountInfo.trackingPaused or false  -- When true, last mount tracking is suspended
 
 -- Per-character persistent storage (to be set by addons that have saved variables)
--- Expected format: savedVarTable[realmName][playerName] = mountID
+-- Expected format: see SetPersistentStorage below.
 --
 -- LibMountInfo.persistentStorage, LibMountInfo.currentRealm,
 -- LibMountInfo.currentPlayer, LibMountInfo.customRealmKey and
